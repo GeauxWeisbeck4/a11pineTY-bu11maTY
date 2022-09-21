@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Alpine.js + Bulma Todos Example</title>
+		<meta charset="UTF-8" />
+		<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'></link>
+    <link rel="stylesheet" href="./bulma.css"></link>
+  </head>
+
+  <body>
+		<nav class="panel is-info" x-data="todos">
+				<p class="panel-heading">
+					Alpine.js + Bulma Todos
+				</p>
+				<form @submit.prevent="createTodo" class="panel-block">
+					<p class="control has-icons-left">
+						<input class="input" type="text" placeholder="Enter Todo" x-ref="todoInput">
+						<span class="icon is-left">
+							<i class="fas fa-plus" aria-hidden="true"></i>
+						</span>
+					</p>
+				</form>
+				<p class="panel-tabs">
+					<template x-for="selMode in modes" :key="selMode">
+						<a @click="setMode(selMode)" x-text="selMode" :class="{ 'is-active': selMode === mode }"/>
+					</template>
+				</p>
+				<template x-for="todo in filteredTodos" :key="todo.id">
+					<label class="panel-block">
+						<input type="checkbox" @click="toggleDoneTodo(todo)" :checked="todo.done">
+						<span  x-text="todo.text"></span>
+						<div style="flex-grow: 1"></div>
+						<button class="button is-danger is-small" @click.stop="removeTodo(todo)"><i class="fas fa-trash" style="color: hsl(0, 100%, 100%)"></i></button>
+					</label>
+				</template>
+				<div class="panel-block">
+					<button class="button is-link is-outlined is-fullwidth" @click="resetAllTodos">
+						Clear all todos (<span x-text="todos.length"></span>)
+					</button>
+				</div>
+			</nav>
+	</body>
+	<script defer src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js" integrity="sha512-UNM1njAgOFUa74Z0bADwAq8gbTcqZC8Ej4xPSzpnh0l6KMevwvkBvbldF9uR++qKeJ+MOZHRjV1HZjoRvjDfNQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+		/* When alpine inits, set up our todos data source and methods. */
+    document.addEventListener("alpine:init", () => {
+      Alpine.data("todos", () => ({
+				storageName: 'todos',
+				todos: localStorage.getItem(this.storageName) ?? [],
+				filteredTodos: [],
+				todo: "",
+				mode: 'All',
+				/* All available filtering modes */
+				modes: ['All', 'Todo', 'Done'],
+				/* Updates filtering mode. Could be done in effect to keep DRY? */
+				getFilteredTodos(){
+					this.filteredTodos = this.todos.filter(todo => {
+						switch(this.mode){
+							case this.modes[0]: return true;
+							case this.modes[1]: return !todo.done;
+							case this.modes[2]: return todo.done;
+							default: return false;
+						}
+					})
+				},
+				handleUpdate(){
+					this.setToLocalStorage();
+					this.getFilteredTodos();
+				},
+				setToLocalStorage(payload = []){
+					localStorage.setItem(this.storageName, JSON.stringify(this.todos))
+				},
+				/* Sets filtering mode */
+				setMode(selection = 'All'){
+					this.mode = selection
+					this.handleUpdate();
+				},
+				/* Creates a todo, and clears the input. */
+        createTodo(e, data) {
+					this.todos.push({text: this.$refs.todoInput.value, done: false, id: uuid.v4()});
+					this.$refs.todoInput.value = '';
+					this.handleUpdate();
+        },
+				/* Removes a todo based on uuidv4 id */
+        removeTodo(todo = {}) {
+					this.todos = this.todos.filter(({id}) => id !== todo.id);
+					this.handleUpdate();
+        },
+				/* Toggles a todo's done state based on uuidv4 id */
+        toggleDoneTodo(todo = {}) {
+					const elem = this.todos.find(({id}) => id === todo.id)
+					elem.done = !elem.done
+					this.handleUpdate();
+				},
+				/* Clears all todos */
+				resetAllTodos(){
+					this.todos = []
+					this.handleUpdate();
+				}
+      }));
+    });
+  </script>
+</html>
